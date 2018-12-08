@@ -115,7 +115,7 @@ public class BlockingQueueTest
                catch (InterruptedException e)
                {
                }
-               
+
             };
 
             new Thread(searcher).start();
