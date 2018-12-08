@@ -13,25 +13,48 @@ import java.util.stream.*;
  */
 public class BlockingQueueTest
 {
+   //Maximum capacity of the BlockingQueue
+   //10 file objects is the most that can
+   //be in the Queue at one time.
    private static final int FILE_QUEUE_SIZE = 10;
+
+   //Number of threads that will pull off a File
+   //from the filesQueue and then do a search of
+   //that file for the keyword.
    private static final int SEARCH_THREADS = 100;
+
+   //Marker to indicate that there are no more
+   //Files in the filesQueue
    private static final Path DUMMY = Paths.get("");
-   private static BlockingQueue<Path> queue = new ArrayBlockingQueue<>(FILE_QUEUE_SIZE);
+
+
+   private static BlockingQueue<Path> filesQueue = new ArrayBlockingQueue<>(FILE_QUEUE_SIZE);
 
    public static void main(String[] args)
    {
       try (var in = new Scanner(System.in)) 
       {
          System.out.print("Enter base directory (e.g. /opt/jdk-9-src): ");
+
          String directory = in.nextLine();
+
          System.out.print("Enter keyword (e.g. volatile): ");
+
          String keyword = in.nextLine();
-          
-         Runnable enumerator = () -> {
+
+         /*
+         This thread will find all the files in the directory
+         provided above and its sub-directories and place
+         each file in the filesQueue
+          */
+         Runnable loadFilesQueue = () -> {
             try
             {
+
                enumerate(Paths.get(directory));
-               queue.put(DUMMY);
+
+               //When finished put the marker that indicates the filesQueue is now empty.
+               filesQueue.put(DUMMY);
             }
             catch (IOException e)
             {
@@ -42,21 +65,47 @@ public class BlockingQueueTest
             }            
          };
          
-         new Thread(enumerator).start();
+         new Thread(loadFilesQueue).start();
+
+
+         /*
+         Create a separate thread for each value
+         in SEARCH_THREADS.
+          */
          for (int i = 1; i <= SEARCH_THREADS; i++) {
+
+            /*
+            This thread will take a File from the
+            filesQueue and perform a search on that
+            file for the keyword provided above.
+             */
             Runnable searcher = () -> {
                try
                {
                   var done = false;
+
                   while (!done)
                   {
-                     Path file = queue.take();
+                     Path file = filesQueue.take();
+
+                     /*
+                     If the marker that indicates the
+                     filesQueue is empty is reached
+                     put the marker back on the filesQueue
+                     so other threads will see it.
+                     Then change done to true so this
+                     loop will end.
+                      */
                      if (file == DUMMY)
                      {
-                        queue.put(file);
+                        filesQueue.put(file);
                         done = true;
                      }
-                     else search(file, keyword);
+                     else {
+
+                        search(file, keyword);
+
+                     }
                   }
                }
                catch (IOException e)
@@ -65,8 +114,10 @@ public class BlockingQueueTest
                }
                catch (InterruptedException e)
                {
-               }               
+               }
+               
             };
+
             new Thread(searcher).start();
          }
       }
@@ -86,7 +137,7 @@ public class BlockingQueueTest
             if (Files.isDirectory(child))
                enumerate(child);
             else
-               queue.put(child);
+               filesQueue.put(child);
          }
       }
    }
@@ -105,8 +156,10 @@ public class BlockingQueueTest
          {
             lineNumber++;
             String line = in.nextLine();
-            if (line.contains(keyword)) 
-               System.out.printf("%s:%d:%s%n", file, lineNumber, line);
+            if (line.contains(keyword)) {
+               System.out.print(Thread.currentThread() + " - ");
+               System.out.printf("%s:%d:%s%n \n", file, lineNumber, line);
+            }
          }
       }
    }
