@@ -10,11 +10,25 @@ import java.util.regex.*;
 
 import javax.imageio.*;
 
+/**
+ * Demonstrates how to use CompletableFuture to chain together a
+ * series of tasks that are non-blocking and can be completed
+ * on multiple threads.
+ *
+ * NOTE:  You must update the static class variable PATH_AND_FILE_NAME_FOR_IMAGES
+ * with the path and file name for the images that will be saved to your
+ * computer when this application runs.
+ */
 public class CompletableFutureDemo
 {
    private static final Pattern IMG_PATTERN = Pattern.compile(
          "[<]\\s*[iI][mM][gG]\\s*[^>]*[sS][rR][cC]\\s*[=]\\s*['\"]([^'\"]*)['\"][^>]*[>]");
+
+   private static final String PATH_AND_FILE_NAME_FOR_IMAGES =
+           "/Users/brucephillips/Downloads/horstman_images/image";
+
    private ExecutorService executor = Executors.newCachedThreadPool();
+
    private URL urlToProcess;
 
    public CompletableFuture<String> readPage(URL url)
@@ -83,7 +97,7 @@ public class CompletableFutureDemo
       {
          for (int i = 0; i < images.size(); i++)
          {
-            String filename = "/tmp/image" + (i + 1) + ".png";
+            String filename = PATH_AND_FILE_NAME_FOR_IMAGES + (i + 1) + ".png";
             ImageIO.write(images.get(i), "PNG", new File(filename));
          }
       }
@@ -98,6 +112,7 @@ public class CompletableFutureDemo
       throws IOException, InterruptedException
    {
       urlToProcess = url;
+
       CompletableFuture.completedFuture(url)
          .thenComposeAsync(this::readPage, executor)
          .thenApply(this::getImageURLs) 
@@ -119,6 +134,8 @@ public class CompletableFutureDemo
    public static void main(String[] args) 
        throws IOException, InterruptedException
    {
+
       new CompletableFutureDemo().run(new URL("http://horstmann.com/index.html"));
+
    }
 }
