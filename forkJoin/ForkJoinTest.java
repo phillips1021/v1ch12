@@ -10,14 +10,38 @@ import java.util.function.*;
  */
 public class ForkJoinTest
 {
+   /**
+    * Determine the total number of elements in an array
+    * where the element value is > 0.5.
+    * @param args
+    */
    public static void main(String[] args)
    {
-      final int SIZE = 10000000;
+      //number of elements in the array
+      final int SIZE = 10_000_000;
+
       var numbers = new double[SIZE];
-      for (int i = 0; i < SIZE; i++) numbers[i] = Math.random();
+
+      /*
+      Place a random value greater the 0.0 but less then 1.0
+      in each array element.
+       */
+      for (int i = 0; i < SIZE; i++) {
+
+         numbers[i] = Math.random();
+
+      }
+
+      /*
+      Create an object of the RecursiveTask that the ForkJoinPool can break
+      down and execute using multiple threads.
+       */
       var counter = new Counter(numbers, 0, numbers.length, x -> x > 0.5);
+
       var pool = new ForkJoinPool();
+
       pool.invoke(counter);
+
       System.out.println(counter.join());
    }
 }
@@ -40,6 +64,10 @@ class Counter extends RecursiveTask<Integer>
 
    protected Integer compute()
    {
+      /*
+      If the remaining array values to process are less then 1000
+      then stop doing the recursion and calculate the result.
+       */
       if (to - from < THRESHOLD)
       {
          int count = 0;
@@ -51,6 +79,10 @@ class Counter extends RecursiveTask<Integer>
       }
       else
       {
+         /*
+         Divide up the array elements that need to be processed
+         and process those on separate threads.
+          */
          int mid = (from + to) / 2;
          var first = new Counter(values, from, mid, filter);
          var second = new Counter(values, mid, to, filter);

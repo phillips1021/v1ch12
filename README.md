@@ -10,3 +10,6 @@ Here is a direct link to Chapter 12:
   
 I've added additional comments and formatting to the code examples to help make 
 them easier to follow and understand.  
+
+NOTE:  You will need Java 10 or higher to compile and run the examples, 
+as the examples use newer Java language features.
