@@ -78,43 +78,120 @@ public class ExecutorDemo
    {
       try (var in = new Scanner(System.in))
       {
+         /*
+         PART 1: Get the total number of times a word is found in a
+         collection of files.
+          */
          System.out.print("Enter base directory (e.g. /opt/jdk-9-src): ");
+
          String start = in.nextLine();
+
          System.out.print("Enter keyword (e.g. volatile): ");
+
          String word = in.nextLine();
       
          Set<Path> files = descendants(Paths.get(start));
+
+         System.out.printf("Will search %d files for the word %s \n", files.size(), word);
+
+         /*
+         Create a collection of Callable objects - this is
+         used to store all the tasks that must be run.
+          */
          var tasks = new ArrayList<Callable<Long>>();
+
          for (Path file : files)
          {
-            Callable<Long> task = () -> occurrences(word, file);          
+            /*
+            For each File create a Callable object that will return
+            a Long object that is the total number of times
+            the provided word is found in the provided file.
+             */
+            Callable<Long> task = () -> occurrences(word, file);
+
+
             tasks.add(task);
+
          }
+
+         /*
+         Create a thread pool that will execute each task immediately
+         using an existing idle thread when available or creating
+         a new thread if no threads are idle.
+          */
          ExecutorService executor = Executors.newCachedThreadPool();
+
          // Use a single thread executor instead to see if multiple threads
          // speed up the search
-         // ExecutorService executor = Executors.newSingleThreadExecutor();
+         //ExecutorService executor = Executors.newSingleThreadExecutor();
          
          Instant startTime = Instant.now();
+
+         /*
+         Submit all the Callable objects to ExecutorService.
+         This is blocking until all tasks have completed.
+         A collection of Future objects is returned.  The Future
+         object stores the total number of times the word
+         was found in the file.
+          */
          List<Future<Long>> results = executor.invokeAll(tasks);
+
          long total = 0;
-         for (Future<Long> result : results)
+
+         /*
+         Iterate over all the Future objects and get the
+         total of how many times the word was found in ALL
+         files.
+          */
+         for (Future<Long> result : results) {
+
             total += result.get();
+
+         }
+
          Instant endTime = Instant.now();
+
          System.out.println("Occurrences of " + word + ": " + total);
-         System.out.println("Time elapsed: "
-            + Duration.between(startTime, endTime).toMillis() + " ms");
+
+         System.out.println("Time elapsed: " + Duration.between(startTime, endTime).toMillis() + " ms");
+
+         /*
+         PART 2: Find the first file that contains the provided word.
+          */
 
          var searchTasks = new ArrayList<Callable<Path>>();
-         for (Path file : files)
+
+         for (Path file : files) {
+
             searchTasks.add(searchForTask(word, file));
+
+         }
+
+         /*
+         Pass the collection of Callable objects to the thread pool
+         ExecutorService.  This call will block until one task
+         returns.  Once one task returns all other running threads
+         are interrupted and canceled.
+          */
          Path found = executor.invokeAny(searchTasks);
+
          System.out.println(word + " occurs in: " + found);
 
-         if (executor instanceof ThreadPoolExecutor) // the single thread executor isn't
-            System.out.println("Largest pool size: " 
-                  + ((ThreadPoolExecutor) executor).getLargestPoolSize());
+
+         /*
+         PART 3: Display how many threads were created by
+         the ExecutorService.
+          */
+         if (executor instanceof ThreadPoolExecutor) {
+
+            // the single thread executor isn't
+            System.out.println("Largest pool size: "
+                    + ((ThreadPoolExecutor) executor).getLargestPoolSize());
+
+         }
+
          executor.shutdown();
+
       }
    }
 }
